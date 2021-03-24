@@ -1,0 +1,49 @@
+{
+  "AllEditions": [
+    {
+      "authors": [
+        "Evi",
+        "Garth",
+        "Trent"
+      ],
+      "number": 3
+    },
+    {
+      "authors": [
+        "Evi",
+        "Garth",
+        "Trent",
+        "Scott"
+      ],
+      "number": 4
+    },
+    {
+      "authors": [
+        "Evi",
+        "Garth",
+        "Trent",
+        "Scott"
+      ],
+      "number": 4
+    },
+    {
+      "authors": [
+        "Evi",
+        "Garth",
+        "Trent",
+        "Ben"
+      ],
+      "number": 4
+    },
+    {
+      "authors": [
+        "Evi",
+        "Gareth",
+        "Trent",
+        "Ben",
+        "Dan"
+      ],
+      "number": 5
+    }
+  ]
+}
