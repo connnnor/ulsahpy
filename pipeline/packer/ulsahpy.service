@@ -1,0 +1,9 @@
+[Unit]
+Description=ulsahpy HTTP Demo Service (running on port 8081)
+
+[Service]
+# Command to execute when the service is started
+ExecStart=/home/ubuntu/ulsahpy/venv/bin/python /home/ubuntu/ulsahpy/ulsahpy/ulsahpy.py
+
+[Install]
+WantedBy=multi-user.target
