@@ -25,7 +25,7 @@ pipeline {
     }
     stage('Build Image') {
       steps {
-        sh 'packer build pipeline/packer/ulsahpy.json > packer.txt'
+        sh 'packer build pipeline/packer/ulsahpy.pkr.hcl > packer.txt'
         sh 'awk \'/AMIs were created:/{getline;print;}\' packer.txt | grep -E -o \'ami-[0-9a-z]{17}\' > aws_image.txt'
       }
     }
