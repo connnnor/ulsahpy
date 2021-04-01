@@ -30,4 +30,9 @@ pipeline {
       }
     }
   }
+  post {
+    always {
+      archiveArtifacts artifacts: 'packer.txt,aws_image.txt', fingerprint: true
+    }
+  }
 }
