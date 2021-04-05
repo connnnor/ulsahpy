@@ -44,6 +44,7 @@ pipeline {
         terraform destroy -var aws_image=\$(<aws_image.txt) -auto-approve
         '''
       }
+    }
   }
   post {
     always {
