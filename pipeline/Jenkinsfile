@@ -34,6 +34,16 @@ pipeline {
         sh 'bash pipeline/testing/tf_testing.sh'
       }
     }
+    stage('Test and destroy the instance') {
+      steps {
+        sh '''#!/bin/bash -l
+        curl --fail \$(<ec2_ip.txt):8081/healthy
+        curl -D - -v \$(<ec2_ip.txt):8081/?edition=5 | grep "HTTP/1.1 200" 
+        curl -D - -v \$(<ec2_ip.txt):8081/?edition=6 | grep "HTTP/1.1 404"
+        cd pipeline/testing
+        terraform destroy -var aws_image=\$(<aws_image.txt) -auto-approve
+        '''
+      }
   }
   post {
     always {
