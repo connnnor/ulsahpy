@@ -71,7 +71,7 @@ $ curl localhost/?edition=4
 If a user tries to request unavailable editions, an error message is returned, like:
 
 ```
-[con ~ 0] > curl -s 'http://127.0.0.1:8081/?edition=9'
+$ curl -s 'http://127.0.0.1:8081/?edition=9'
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
 <title>404 Not Found</title>
 <h1>Not Found</h1>
@@ -171,7 +171,7 @@ Configure the project in Jenkins using the GUI. Here are the steps I followed:
     * Select _Poll SCM_ and use the schedule `H/5 * * * *` to poll every 5 minutes
 * In _Pipeline_ Section:
     * For _Definition_ select _Pipeline Script from SCM_ 
-    * In _SCM_ Section (source: [jenkins-git-err-stackoverflow]
+    * In _SCM_ Section (source: [jenkins-git-err-stackoverflow])
         * Enter the information for your git repo URL and credentials
         * Click _advanced_ and set _Name_ to `origin` and _Refspec_ to `+refs/pull/*:refs/remotes/origin/pr/*`
         * Leave _Branches to build_ empty
@@ -498,6 +498,8 @@ Now, add another step at the end of the Jenkinsfile to run the new tests:
 
 Looking in the console output in Jenkins I can see a couple lines that (somewhat vaguely) show my tests are working:
 
+Querying with `edition=5` returns success (HTTP 200):
+
 ```
 > GET /?edition=5 HTTP/1.1
 > Host: 54.166.95.146:8081
@@ -514,6 +516,8 @@ Looking in the console output in Jenkins I can see a couple lines that (somewhat
 < 
 { [60 bytes data]
 ```
+
+Querying with `edition=6` returns an error (HTTP 404) since there is no 6th edition:
 
 ```
 > GET /?edition=6 HTTP/1.1
