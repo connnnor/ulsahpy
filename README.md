@@ -536,6 +536,197 @@ The last step is deploying our application to a (mock) production environment as
 We'll use Terraform again for this step.
 
 __TODO TODO TODO TODO__
+## Step 7: Deploying to multiple instances and Load Balancer
+
+The last step is deploying our application to a (mock) production environment as part of the pipeline. The production environment in this case is made up of two EC2 instances and an application load balancer. 
+We'll use Terraform again for this step.
+
+Create a new directory `production` inside the existing `pipeline` directory and add the two files shown below (`tf_prod.sh`, and `ulsahpy.tf`):
+
+We can reuse some of the Terraform config from the testing plan file, and update it to create a second EC2 instance and a load balancer. 
+
+`tf_prod.sh`
+```
+cp aws_image.txt pipeline/production
+cd pipeline/production
+terraform init
+terraform apply \
+  -var aws_image="$(<aws_image.txt)" \
+  -auto-approve \
+  -no-color
+terraform output -raw ulsahpy-elb-dnsname > ../../elb_dnsname.txt
+```
+
+`ulsahpy.tf`
+```
+variable "aws_image" {}
+
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 2.70"
+    }
+  }
+}
+
+provider "aws" {
+  region  = "us-east-1"
+}
+
+data "aws_vpc" "default" {
+  default = true
+}
+
+data "aws_subnet_ids" "all" {
+  vpc_id = data.aws_vpc.default.id
+}
+
+resource "aws_security_group" "ulsahpy_app_sg" {
+  name        = "ulsahpy_app_sg"
+  vpc_id      = data.aws_vpc.default.id
+
+  # Application port from anywhere
+  ingress {
+    description = "Flask Port"
+    from_port   = 8081
+    to_port     = 8081
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "ulsahpy_app_sg"
+  }
+}
+
+resource "aws_security_group" "ulsahpy_lb_sg" {
+  name        = "ulsahpy_lb_sg"
+  vpc_id      = data.aws_vpc.default.id
+
+  # HTTP from anywhere
+  ingress {
+    description = "HTTP ports open to internet"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "ulsahpy_lb_sg"
+  }
+}
+
+module "elb_http" {
+  source  = "terraform-aws-modules/elb/aws"
+  version = "~> 2.0"
+
+  name               = "ulsahpy-elb"
+
+  security_groups    = [aws_security_group.ulsahpy_lb_sg.id]
+  subnets            = data.aws_subnet_ids.all.ids
+  internal           = false
+
+  listener = [
+    {
+      instance_port     = 8081
+      instance_protocol = "HTTP"
+      lb_port           = 80
+      lb_protocol       = "HTTP"
+    },
+  ]
+
+  health_check = {
+    target              = "HTTP:8081/healthy"
+    interval            = 30
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    timeout             = 5
+  }
+
+  // ELB attachments
+  number_of_instances = 2
+  instances           = [aws_instance.ulsahpy-a.id, aws_instance.ulsahpy-b.id]
+
+  tags = {
+    Owner       = "user"
+    Environment = "prod"
+  }
+}
+
+resource "aws_instance" "ulsahpy-a" {
+  ami           = var.aws_image
+  instance_type = "t2.micro"
+  key_name      = "TestKP"
+  vpc_security_group_ids = [aws_security_group.ulsahpy_app_sg.id]
+
+  tags = {
+    Name = "ulsahpy-a"
+  }
+}
+
+resource "aws_instance" "ulsahpy-b" {
+  ami           = var.aws_image
+  instance_type = "t2.micro"
+  key_name      = "TestKP"
+  vpc_security_group_ids = [aws_security_group.ulsahpy_app_sg.id]
+
+  tags = {
+    Name = "ulsahpy-b"
+  }
+}
+
+output "ulsahpy-elb-dnsname" {
+  description = "The DNS name of the ELB"
+  value       = module.elb_http.this_elb_dns_name
+}
+```
+
+The load balancer listens on port 80 and forwards requests to the droplets on port 8081 where `ulsahpy` is listening. The load balancer health checks query the `/healthy` endpoint
+
+I could parameterize the creation of the EC2 instances,  but for now, since it's only two instances I've just added another resource (`ulsahpy-b`) in the config file. 
+
+Now, add another step at the end of the Jenkinsfile to run the prod deploy step as part of the pipeline:
+
+`Jenkinsfile`:
+```
+...
+    stage('Create LB') {
+      steps {
+        sh 'bash pipeline/production/tf_prod.sh'
+      }
+    }
+...
+```
+
+Now, point your browser to the `elb dnsname` output from terraform to visit the application
+
+I verified the health checks are passing by pulling up the ELB in the AWS Console and checking that each target's status was healthy, though this step could also be added to the pipeline. 
+
+I manually ran `terraform destroy` to delete all the AWS resources.
+
+## Next Steps
+
+* Parameterize config so it's easy to customize infrastructure, like, adding more EC2 instances for the application. [like this](https://learn.hashicorp.com/tutorials/terraform/variables?in=terraform/configuration-language)
+* Set up security groups properly so the EC2 instances are only accessible via the load balancer instead of being open to the internet
+* Create all required infrastructure. Currently I'm relying on the default VPC
+* Actually package the python code
+* Add step that destroys infra
 
 ## References:
 
