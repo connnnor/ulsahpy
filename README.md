@@ -9,7 +9,7 @@ This example includes the following elements
 * Unit tests for the application
 * An AMI containing the application and its dependencies
 * A single server testing environment
-* __TODO__ A load balanced "production" environment 
+* A load balanced "production" environment 
 * A CI/CD pipeline to tie everything together
 
 And uses the following tools and services:
@@ -532,13 +532,7 @@ Querying with `edition=6` returns an error (HTTP 404) since there is no 6th edit
 
 ## Step 7: Deploying to multiple instances and Load Balancer
 
-The last step is deploying our application to a (mock) production environment as part of the pipeline. The production environment in this case is made up of two EC2 instances and an application load balancer. 
-We'll use Terraform again for this step.
-
-__TODO TODO TODO TODO__
-## Step 7: Deploying to multiple instances and Load Balancer
-
-The last step is deploying our application to a (mock) production environment as part of the pipeline. The production environment in this case is made up of two EC2 instances and an application load balancer. 
+The last step is deploying our application to a (mock) production environment as part of the pipeline. The production environment in this case is made up of two EC2 instances and an elastic load balancer. 
 We'll use Terraform again for this step.
 
 Create a new directory `production` inside the existing `pipeline` directory and add the two files shown below (`tf_prod.sh`, and `ulsahpy.tf`):
@@ -714,11 +708,41 @@ Now, add another step at the end of the Jenkinsfile to run the prod deploy step 
 ...
 ```
 
-Now, point your browser to the `elb dnsname` output from terraform to visit the application
-
 I verified the health checks are passing by pulling up the ELB in the AWS Console and checking that each target's status was healthy, though this step could also be added to the pipeline. 
 
-I manually ran `terraform destroy` to delete all the AWS resources.
+Once the pipeline runs, point your browser to the `elb_dnsname.txt` archived for the run in Jenkins to visit the application, like:
+As a sanity check, I made sure that I could access the page from my desktop like:
+
+```
+$ curl -D - -v http://ulsahpy-elb-457067393.us-east-1.elb.amazonaws.com/\?edition\=5          
+*   Trying 54.225.85.196...
+* TCP_NODELAY set
+* Connected to ulsahpy-elb-457067393.us-east-1.elb.amazonaws.com (54.225.85.196) port 80 (#0)
+> GET /?edition=5 HTTP/1.1
+> Host: ulsahpy-elb-457067393.us-east-1.elb.amazonaws.com
+> User-Agent: curl/7.64.1
+> Accept: */*
+>
+< HTTP/1.1 200 OK
+HTTP/1.1 200 OK
+< Content-Type: application/json
+Content-Type: application/json
+< Date: Tue, 06 Apr 2021 17:57:37 GMT
+Date: Tue, 06 Apr 2021 17:57:37 GMT
+< Server: Werkzeug/1.0.1 Python/3.8.5
+Server: Werkzeug/1.0.1 Python/3.8.5
+< Content-Length: 60
+Content-Length: 60
+< Connection: keep-alive
+Connection: keep-alive
+
+<
+{"authors":["Evi","Gareth","Trent","Ben","Dan"],"number":5}
+* Connection #0 to host ulsahpy-elb-457067393.us-east-1.elb.amazonaws.com left intact
+* Closing connection 0
+```
+
+I manually ran `terraform destroy` to delete all the AWS resources managed by Terraform. Don't forget to deregister any AMIs and delete any snapshots that are no longer needed as well.
 
 ## Next Steps
 
