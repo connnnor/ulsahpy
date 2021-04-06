@@ -45,10 +45,15 @@ pipeline {
         '''
       }
     }
+    stage('Create LB') {
+      steps {
+        sh 'bash pipeline/production/tf_prod.sh'
+      }
+    }
   }
   post {
     always {
-      archiveArtifacts artifacts: 'packer.txt,aws_image.txt', fingerprint: true
+      archiveArtifacts artifacts: 'packer.txt,aws_image.txt,elb_dnsname.txt,pipeline/production/terraform.tfstate', fingerprint: true
     }
   }
 }
